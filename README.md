@@ -15,7 +15,7 @@ A lightweight conversational AI assistant that detects basic emotions (happiness
 
 ## 🔧 Tech Stack
 
-- Python 3.7+
+- Python 3.11+
 - Hugging Face Transformers
 - Pre-trained Emotion Classification Model
 - Streamlit for Frontend UI
@@ -34,3 +34,24 @@ We use the model [`j-hartmann/emotion-english-distilroberta-base`](https://huggi
 ```bash
 git clone https://github.com/your-username/emotion-aware-ai-assistant.git
 cd emotion-aware-ai-assistant
+
+---
+
+## 🤝 Acknowledgements
+- Emotion model by @j-hartmann
+
+- Streamlit for the intuitive app deployment
+
+- Hugging Face for the Transformers library
+
+---
+
+## 📫 Contact
+- Made with ❤️ by Fazeel Asghar
+- 📧 fasghar40@gmail.com
+- 🌐 Portfolio - https://fazeel-aiml.github.io/Portfolio-Fazeel.github.io/ 
+
+---
+
+## 📝 License
+This project is licensed under the MIT License - see the LICENSE file for details.
