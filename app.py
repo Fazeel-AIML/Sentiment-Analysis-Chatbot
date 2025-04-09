@@ -1,131 +1,94 @@
 import streamlit as st
+from huggingface_hub import login
 from transformers import pipeline
 import random
+import os
 
-# --- Load Model ---
-emotion_pipeline = pipeline(
-    "text-classification",
-    model="j-hartmann/emotion-english-distilroberta-base",
-    return_all_scores=False
-)
+# Hugging Face login (Token should be in Streamlit Secrets)
+login(token=st.secrets["HF_HUB_TOKEN"])
 
-def detect_emotion(text):
-    result = emotion_pipeline(text)
-    return result[0]['label']
+# Load emotion detection pipeline
+@st.cache_resource
+def load_model():
+    return pipeline("text-classification",
+                    model="j-hartmann/emotion-english-distilroberta-base",
+                    return_all_scores=False)
 
-# --- Generate Response Based on Emotion ---
-def generate_response(text):
-    emotion = detect_emotion(text)
+emotion_pipeline = load_model()
 
+# Emoji mapping
+emotion_emojis = {
+    "anger": "🤬",
+    "disgust": "🤢",
+    "fear": "😨",
+    "joy": "😀",
+    "neutral": "😐",
+    "sadness": "😭",
+    "surprise": "😲"
+}
+
+# Response generation
+def generate_response(emotion):
     responses = {
         "joy": [
-            "😀 That's awesome! Tell me more!",
-            "🎉 Love hearing that! You sound happy!",
-            "😄 Your joy is contagious! Keep it up!",
-            "🌞 Great to hear! What else is going well?"
+            "😊 I'm glad to hear that! Tell me more.",
+            "😄 That’s great! What else is going on?",
+            "🌟 Awesome! You’re making my day better too!",
         ],
         "sadness": [
-            "😭 I'm really sorry to hear that. I'm here for you.",
-            "💙 That sounds tough. Want to talk more about it?",
-            "😔 It's okay to feel down sometimes. I'm listening.",
-            "🤗 You're not alone. Share if it helps."
+            "😔 I'm really sorry you're feeling this way. I'm here for you.",
+            "💙 It's tough, but you're not alone.",
+            "🌧️ Would you like to talk more about it?",
         ],
         "anger": [
-            "🤬 That sounds really frustrating. What happened?",
-            "💢 I can sense you're upset. Let’s talk about it.",
-            "😤 Take a deep breath. I'm here to listen.",
-            "⚡ Vent it out! I'm all ears."
+            "😡 That sounds upsetting. I'm listening.",
+            "💢 I can sense you're frustrated.",
+            "⚡️ What's making you feel this way?",
         ],
         "disgust": [
-            "🤢 That doesn’t sound good. What made you feel that way?",
-            "😖 Yikes, that’s awful. Want to share more?",
-            "🙁 That situation must’ve been unpleasant.",
-            "😷 I understand your reaction. Tell me more."
+            "🤢 That doesn’t sound good. Want to tell me more?",
+            "😣 That must've been unpleasant.",
         ],
         "fear": [
-            "😨 That sounds scary. Do you want to talk about it?",
-            "😰 I'm here for you. What happened?",
-            "😟 It’s okay to be afraid. You’re safe here.",
-            "🫂 Let’s face this fear together."
+            "😨 That sounds scary. Are you okay?",
+            "🫣 I'm here for you. Want to talk about it?",
         ],
         "surprise": [
-            "😲 Whoa, that’s unexpected! What happened?",
-            "😮 That caught you off guard, huh?",
-            "😳 Wow! Tell me more!",
-            "✨ That sounds surprising!"
+            "😲 Whoa! That’s unexpected!",
+            "🤯 Sounds like something surprising happened.",
         ],
         "neutral": [
-            "😐 I'm here to chat. What’s on your mind?",
-            "💬 Feel free to share anything.",
-            "🤖 I’m always ready for a good convo.",
-            "👋 How can I assist you today?"
+            "🤖 I’m here to chat. What’s on your mind?",
+            "💬 How can I help you today?",
         ]
     }
+    return random.choice(responses.get(emotion, responses["neutral"]))
 
-    return random.choice(responses.get(emotion, responses["neutral"])), emotion
+# Streamlit UI
+st.set_page_config(page_title="Aya Emotion Detection Chatbot", layout="centered")
+st.markdown("<h1 style='text-align: center; color: #FF4B4B;'>💬 Aya Emotion Detection Chatbot</h1>", unsafe_allow_html=True)
+st.markdown("Enter a message, and I’ll detect your emotion and respond like a real chat!")
 
-# --- Streamlit Config ---
-st.set_page_config(page_title="Aya Emotion Detection Chatbot", page_icon="💬")
-st.markdown("""
-    <style>
-        .chat-bubble {
-            padding: 12px 18px;
-            border-radius: 18px;
-            margin: 10px 0;
-            display: inline-block;
-            max-width: 75%;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
-        }
-        .user {
-            background-color: #DCF8C6;
-            color: #000;
-            text-align: right;
-            border-top-right-radius: 0;
-            float: right;
-            clear: both;
-        }
-        .bot {
-            background-color: #F1F0F0;
-            color: #000;
-            text-align: left;
-            border-top-left-radius: 0;
-            float: left;
-            clear: both;
-        }
-        .clear {
-            clear: both;
-        }
-    </style>
-""", unsafe_allow_html=True)
-
-# --- Title ---
-st.markdown("<h2 style='text-align: center;'>💬 Aya Emotion Detection Chatbot</h2>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center;'>Chat with Aya, and she’ll sense your emotions 🤖🧠</p>", unsafe_allow_html=True)
-
-# --- Chat State ---
-if 'chat_history' not in st.session_state:
+# Chat messages (stored in session)
+if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
-# --- User Input ---
-user_input = st.text_input("You:", placeholder="Type your message here...")
+# User input
+user_input = st.text_input("You:", key="input_text")
 
 if user_input:
-    response, emotion = generate_response(user_input)
-    emoji_map = {
-        "anger": "🤬",
-        "disgust": "🤢",
-        "fear": "😨",
-        "joy": "😀",
-        "neutral": "😐",
-        "sadness": "😭",
-        "surprise": "😲"
-    }
+    detected_emotion = emotion_pipeline(user_input)[0]['label']
+    emoji = emotion_emojis.get(detected_emotion, "🤖")
+    response = generate_response(detected_emotion)
 
-    # Save both messages to chat history
-    st.session_state.chat_history.append(("user", user_input))
-    st.session_state.chat_history.append(("bot", f"{emoji_map.get(emotion, '💬')} ({emotion}) {response}"))
+    # Add to top of chat
+    st.session_state.chat_history.insert(0, {
+        "user": user_input,
+        "emotion": f"{detected_emotion} {emoji}",
+        "bot": response
+    })
 
-# --- Display Chat (Recent on Top) ---
-for sender, msg in reversed(st.session_state.chat_history):
-    bubble_class = "user" if sender == "user" else "bot"
-    st.markdown(f"<div class='chat-bubble {bubble_class}'>{msg}</div><div class='clear'></div>", unsafe_allow_html=True)
+# Chat display
+st.markdown("### 🧠 Recent Messages")
+for chat in st.session_state.chat_history:
+    st.markdown(f"**You:** {chat['user']}  \n> *Emotion:* `{chat['emotion']}`  \n**Aya:** {chat['bot']}")
